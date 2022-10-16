@@ -30,7 +30,7 @@ class PokeDBManeger:
     def addTypeToPokemon(self, type, pokemonID):
         try:
             with self.connection.cursor() as cursor:
-                query = f'SELECT * FROM pokemon_types WHERE pokeID={pokemonID} AND type="{type}");'
+                query = f'SELECT * FROM pokemon_types WHERE pokeID={pokemonID} AND type="{type}";'
                 cursor.execute(query)
                 result = cursor.fetchall()
                 if len(result) > 0:
@@ -52,7 +52,7 @@ class PokeDBManeger:
         except TypeError as e:
             print(e)
 
-    async def getTypesFromApi(pokemonName):
+    async def getTypesFromApi(self, pokemonName):
         res = requests.get(f"https://pokeapi.co/api/v2/pokemon/{pokemonName}")
         if res.status_code == 404:
             return "there is no such pokemon in the api"
@@ -64,6 +64,10 @@ class PokeDBManeger:
 
     async def getTypes(self, pokemonName):
         pokemonID = self.getPokemonIdByName(pokemonName)
+        try:
+            val = int(pokemonID)
+        except ValueError:
+            return pokemonID
         types = await self.getTypesFromApi(pokemonName)
         for type in types:
             self.addTypeToPokemon(type, pokemonID)
@@ -77,6 +81,8 @@ class PokeDBManeger:
                 cursor.execute(query)
                 result = cursor.fetchall()
                 names_only = list(map(lambda x: x["trainer_name"], result))
+                if len(names_only) ==0:
+                    return "no owners found..."
                 return names_only
         except TypeError as e:
             print(e)
@@ -88,6 +94,8 @@ class PokeDBManeger:
                 cursor.execute(query)
                 result = cursor.fetchall()
                 names_only = list(map(lambda x: x["name"], result))
+                if len(names_only) ==0:
+                    return "no pokemons found..."
                 return names_only
         except TypeError as e:
             print(e)
