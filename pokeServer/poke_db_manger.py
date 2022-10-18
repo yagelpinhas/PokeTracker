@@ -13,6 +13,7 @@ class PokeDBManeger:
             charset="utf8",
             cursorclass=pymysql.cursors.DictCursor
         )
+        self.next_id = 152
 
     def getPokemonIdByName(self, pokemonName):
         try:
@@ -81,7 +82,7 @@ class PokeDBManeger:
                 cursor.execute(query)
                 result = cursor.fetchall()
                 names_only = list(map(lambda x: x["trainer_name"], result))
-                if len(names_only) ==0:
+                if len(names_only) == 0:
                     return "no owners found..."
                 return names_only
         except TypeError as e:
@@ -94,7 +95,7 @@ class PokeDBManeger:
                 cursor.execute(query)
                 result = cursor.fetchall()
                 names_only = list(map(lambda x: x["name"], result))
-                if len(names_only) ==0:
+                if len(names_only) == 0:
                     return "no pokemons found..."
                 return names_only
         except TypeError as e:
@@ -122,17 +123,20 @@ class PokeDBManeger:
                 if res.status_code == 404:
                     return "no such pokemon in the api"
                 pokemon = res.json()
-                global next_id
-                pokemon_id = next_id
-                next_id += 1
+                pokemon_id = self.next_id
+                self.next_id += 1
                 types = await self.getTypesFromApi(pokemonName)
                 height = pokemon["height"]
                 weight = pokemon["weight"]
-                query = f'INSERT INTO pokemons (id,name,type,height,weight) VALUES({next_id},"{pokemonName}","{types[0]}",{height},{weight})'
+                query = f'INSERT INTO pokemons (id,name,type,height,weight) VALUES({self.next_id},"{pokemonName}","{types[0]}",{height},{weight})'
                 cursor.execute(query)
                 self.connection.commit()
                 for type in types:
                     self.addTypeToPokemon(type, pokemonName)
+                query = f'SELECT * from pokemons where name ="{pokemonName}"'
+                cursor.execute(query)
+                result = cursor.fetchall()
+                return result[0]
         except TypeError as e:
             print(e)
 
@@ -153,6 +157,10 @@ class PokeDBManeger:
         try:
             with self.connection.cursor() as cursor:
                 pokemonId = self.getPokemonIdByName(pokemonName)
+                try:
+                    val = int(pokemonId)
+                except ValueError:
+                    return False
                 query = f'SELECT pokeID,trainer_name FROM pokemon_trainer WHERE pokeID={pokemonId} AND trainer_name="{trainerName}"'
                 cursor.execute(query)
                 result = cursor.fetchall()
@@ -173,6 +181,19 @@ class PokeDBManeger:
                 return f"{old_name} evolved to {new_name} by {trainerName}"
         except TypeError as e:
             return e
+        
+    async def addNewOwnership(self, trainerName, new_pokemon):
+        if self.checkOwnership(new_pokemon, trainerName) == True:
+            return f"The trainer already owns {new_pokemon}"
+        newPokemonId = self.getPokemonIdByName(new_pokemon)
+        try:
+            with self.connection.cursor() as cursor:
+                query = f'INSERT INTO pokemon_trainer (pokeID,trainer_name) VALUES({newPokemonId},"{trainerName}")'
+                cursor.execute(query)
+                self.connection.commit()
+                return f"added {new_pokemon} to {trainerName}"
+        except TypeError as e:
+            return e
 
     async def deleteOwnership(self, pokemonName, trainerName):
         if self.checkOwnership(pokemonName, trainerName) == False:
@@ -186,6 +207,16 @@ class PokeDBManeger:
         except TypeError as e:
             print(e)
 
+    def find_next_evolution(self, current, chain):
+        while True:
+            if len(chain["evolves_to"]) == 0:
+                return "can't evolve"
+            if current == chain["species"]["name"]:
+                return chain["evolves_to"][0]["species"]["name"]
+            else:
+                chain = chain["evolves_to"][0]
+        
+
     async def evolve(self, pokemonName, trainerName):
         if self.checkOwnership(pokemonName, trainerName) == False:
             return "no such ownership in the database"
@@ -197,10 +228,11 @@ class PokeDBManeger:
         evolution_chain_url = species["evolution_chain"]["url"]
         res = requests.get(f"{evolution_chain_url}")
         evolution_chain = res.json()
-        evolution_list = evolution_chain["chain"]["evolves_to"]
-        if len(evolution_list) == 0:
-            return "can't evolve"
-        new_name = evolution_list[0]["species"]["name"]
-        if (new_name == pokemonName):
-            return "can't evolve"
+        new_name = self.find_next_evolution(pokemonName, evolution_chain["chain"])
+        # evolution_list = evolution_chain["chain"]["evolves_to"]
+        # if len(evolution_list) == 0:
+        #     return "can't evolve"
+        # new_name = evolution_list[0]["evolves_to"][0]["species"]["name"]
+        # if (new_name == pokemonName):
+        #     return "can't evolve"
         return (self.updateOwnership(trainerName, new_name, pokemonName))

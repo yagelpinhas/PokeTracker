@@ -16,7 +16,6 @@ connection = pymysql.connect(
 )
 
 app = FastAPI()
-next_id = 152
 
 db_manager = poke_db_manger.PokeDBManeger()
 
@@ -51,19 +50,23 @@ async def addPokemon(pokemonName):
     return await db_manager.addPokemon(pokemonName)
 
 
+@app.post("/addOwnership/")
+async def addPokemon(pokemon, trainer):
+    return await db_manager.addNewOwnership(trainer, pokemon)
+
 @app.get("/getPokemonsByType/{type}")
 async def getPokemonsByType(type):
     return await db_manager.getPokemonsByType(type)
 
 
 @app.delete("/deleteOwnership/")
-async def deleteOwnership(pokemonName, trainerName):
-    return await db_manager.deleteOwnership(pokemonName, trainerName)
+async def deleteOwnership(pokemon, trainer):
+    return await db_manager.deleteOwnership(pokemon, trainer)
 
 
 @app.put("/evolve/")
-async def evolve(pokemonName, trainerName):
-    return await db_manager.evolve(pokemonName, trainerName)
+async def evolve(pokemon, trainer):
+    return await db_manager.evolve(pokemon, trainer)
 
 
 if __name__ == "__main__":
