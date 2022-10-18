@@ -229,10 +229,4 @@ class PokeDBManeger:
         res = requests.get(f"{evolution_chain_url}")
         evolution_chain = res.json()
         new_name = self.find_next_evolution(pokemonName, evolution_chain["chain"])
-        # evolution_list = evolution_chain["chain"]["evolves_to"]
-        # if len(evolution_list) == 0:
-        #     return "can't evolve"
-        # new_name = evolution_list[0]["evolves_to"][0]["species"]["name"]
-        # if (new_name == pokemonName):
-        #     return "can't evolve"
         return (self.updateOwnership(trainerName, new_name, pokemonName))
