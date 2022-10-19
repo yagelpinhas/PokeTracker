@@ -20,7 +20,7 @@ def test_pokemon_type():
     response = client.get("/pokemons/types/eevee")
     assert response.status_code == 200
     types = response.json()
-    assert len(types) == 1, f"Duplicate types found for eevee...."
+    assert len(types) == 1, "Duplicate types found for eevee...."
     assert types[0] == "normal" 
 
 def test_illegal_pokemon_type():
