@@ -50,4 +50,7 @@ def findPokemons(trainerName):
             return names_only
     except TypeError as e:
         print(e) 
+        
+        
+
 
