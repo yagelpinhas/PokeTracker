@@ -1,13 +1,12 @@
 
 from unittest.mock import patch
-import mock
+
 from urllib import response
 import pytest
 
 
 
 from fastapi.testclient import TestClient
-import json
 
 from server import app
 
@@ -20,7 +19,6 @@ def test_root():
     response = client.get("/")
     assert response.status_code == 200, "Test failed!, cant get main site html..."
 
-@mock.patch('db_manager.getTypes')
 def test_pokemon_type(get_types):
     get_types.return_value = ['normal']
     response = client.get("/pokemons/types/eevee")
