@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
-import poke_db_manger
+import poke_db_manager
 
 router = APIRouter()
-db_manager = poke_db_manger.PokeDBManeger()
+db_manager = poke_db_manager.PokeDBManeger()
 
 router = APIRouter(
     prefix="/trainers",
