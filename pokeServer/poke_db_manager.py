@@ -1,6 +1,6 @@
 import pymysql
 import requests
-
+from fastapi import HTTPException
 
 class PokeDBManeger:
 
@@ -22,7 +22,7 @@ class PokeDBManeger:
                 cursor.execute(query)
                 result = cursor.fetchall()
                 if len(result) == 0:
-                    return "No such pokemon name in the database"
+                    raise HTTPException(status_code=404, detail= "No such pokemon name in the database")
                 pokemonID = result[0]["id"]
                 return pokemonID
         except TypeError as e:
@@ -56,7 +56,7 @@ class PokeDBManeger:
     async def getTypesFromApi(self, pokemonName):
         res = requests.get(f"https://pokeapi.co/api/v2/pokemon/{pokemonName}")
         if res.status_code == 404:
-            return "there is no such pokemon in the api"
+            raise HTTPException(status_code=404, detail= "there is no such pokemon in the api")
         pokemon = res.json()
         types = []
         for obj in pokemon["types"]:
@@ -83,7 +83,9 @@ class PokeDBManeger:
                 result = cursor.fetchall()
                 names_only = list(map(lambda x: x["trainer_name"], result))
                 if len(names_only) == 0:
-                    return "no owners found..."
+                    #return "no owners found..."
+                    raise HTTPException(status_code=400, detail="No owners found...")
+
                 return names_only
         except TypeError as e:
             print(e)
@@ -96,7 +98,8 @@ class PokeDBManeger:
                 result = cursor.fetchall()
                 names_only = list(map(lambda x: x["name"], result))
                 if len(names_only) == 0:
-                    return "no pokemons found..."
+                    raise HTTPException(status_code=404, detail="no pokemons found...")
+                
                 return names_only
         except TypeError as e:
             print(e)
@@ -117,11 +120,11 @@ class PokeDBManeger:
                 cursor.execute(query)
                 result = cursor.fetchall()
                 if len(result) > 0:
-                    return "this pokemon already exists"
+                    raise HTTPException(status_code=404, detail="this pokemon already exists")
                 res = requests.get(
                     f"https://pokeapi.co/api/v2/pokemon/{pokemonName}")
                 if res.status_code == 404:
-                    return "no such pokemon in the api"
+                    raise HTTPException(status_code=404, detail="no such pokemon in the api")
                 pokemon = res.json()
                 pokemon_id = self.next_id
                 self.next_id += 1
@@ -147,7 +150,7 @@ class PokeDBManeger:
                 cursor.execute(query)
                 result = cursor.fetchall()
                 if len(result) == 0:
-                    return "no pokemons with this type"
+                    raise HTTPException(status_code=404, detail="no pokemons with this type")
                 names_only = list(map(lambda x: x["name"], result))
                 return names_only
         except TypeError as e:
@@ -170,7 +173,7 @@ class PokeDBManeger:
 
     def updateOwnership(self, trainerName, new_name, old_name):
         if self.checkOwnership(new_name, trainerName) == True:
-            return "The trainer already owns the evolved pokemon"
+            raise HTTPException(status_code=400, detail="The trainer already owns the evolved pokemon")
         oldPokemonId = self.getPokemonIdByName(old_name)
         newPokemonId = self.getPokemonIdByName(new_name)
         try:
@@ -178,13 +181,13 @@ class PokeDBManeger:
                 query = f'UPDATE pokemon_trainer SET pokeID={newPokemonId} WHERE pokeID={oldPokemonId} AND trainer_name="{trainerName}"'
                 cursor.execute(query)
                 self.connection.commit()
-                return f"{old_name} evolved to {new_name} by {trainerName}"
+                raise HTTPException(status_code=404, detail=f"{old_name} evolved to {new_name} by {trainerName}")
         except TypeError as e:
             return e
         
     async def addNewOwnership(self, trainerName, new_pokemon):
         if self.checkOwnership(new_pokemon, trainerName) == True:
-            return f"The trainer already owns {new_pokemon}"
+            raise HTTPException(status_code=400, detail=f"The trainer already owns {new_pokemon}")
         newPokemonId = self.getPokemonIdByName(new_pokemon)
         try:
             with self.connection.cursor() as cursor:
@@ -197,7 +200,7 @@ class PokeDBManeger:
 
     async def deleteOwnership(self, pokemonName, trainerName):
         if self.checkOwnership(pokemonName, trainerName) == False:
-            return "Can't delete this ownership because it doesn't exist"
+            raise HTTPException(status_code=404, detail="Can't delete this ownership because it doesn't exist")
         try:
             with self.connection.cursor() as cursor:
                 pokemonId = self.getPokemonIdByName(pokemonName)
@@ -219,7 +222,7 @@ class PokeDBManeger:
 
     async def evolve(self, pokemonName, trainerName):
         if self.checkOwnership(pokemonName, trainerName) == False:
-            return "no such ownership in the database"
+            raise HTTPException(status_code=404, detail="no such ownership in the database")
         res = requests.get(f"https://pokeapi.co/api/v2/pokemon/{pokemonName}")
         pokemon = res.json()
         speciesUrl = pokemon["species"]["url"]

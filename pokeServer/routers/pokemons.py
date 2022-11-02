@@ -1,8 +1,8 @@
-from fastapi import APIRouter
-import poke_db_manger
+from fastapi import APIRouter, HTTPException
+import poke_db_manager
 
 router = APIRouter()
-db_manager = poke_db_manger.PokeDBManeger()
+db_manager = poke_db_manager.PokeDBManeger()
 
 router = APIRouter(
     prefix="/pokemons",
@@ -18,7 +18,7 @@ async def getPokemonsBy(trainer = None, type = None):
     elif type is not None:
         return await db_manager.getPokemonsByType(type)
     else:
-        return "no query parametrs givven ('trainer' or 'type')"
+        raise HTTPException(status_code=400, detail="no query parametrs givven ('trainer' or 'type')")
 
 
 @router.post("/{pokemonName}")
@@ -31,4 +31,6 @@ async def getTypes(pokemonName):
 
 @router.put("/evolve")
 async def evolve(pokemon, trainer):
+    if pokemon is None or trainer is None:
+        raise HTTPException(status_code=400, detail="one or more query parametrs missing ('name', 'town')")
     return await db_manager.evolve(pokemon, trainer)
